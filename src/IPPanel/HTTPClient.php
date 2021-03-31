@@ -86,7 +86,7 @@ class HTTPClient
      * @throws Errors\Error
      */
     public function request(
-        $method = "GET",
+        $method,
         $url,
         $data = null,
         $params = null,
