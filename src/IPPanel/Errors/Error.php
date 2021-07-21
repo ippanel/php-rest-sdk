@@ -20,10 +20,10 @@ class Error extends \Exception
     /**
      * @inheritdoc
      */
-    public function __construct($message, $code = 0)
+    public function __construct($message, $code = 500)
     {
         $this->_message = $message;
-        $this->_code = $code;
+        $this->_code = is_numeric($code) ? $code : 500;
 
         parent::__construct(json_encode($message), $code);
     }
@@ -54,7 +54,7 @@ class Error extends \Exception
     public static function parseErrors($response)
     {
         if (isset($response->data) && isset($response->data->error)) {
-            return new Error($response->data->error, $response->code);
+            return new Error($response->data->error, is_numeric($response->code) ? $response->code : 500);
         }
 
         return false;
