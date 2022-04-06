@@ -86,8 +86,8 @@ class HTTPClient
      * @throws Errors\Error
      */
     public function request(
-        $method = "GET",
         $url,
+        $method = "GET",  
         $data = null,
         $params = null,
         $headers = null
@@ -160,7 +160,7 @@ class HTTPClient
      */
     public function get($url, $params = Null, $headers = Null)
     {
-        return $this->request("GET", $url, Null, $params, $headers);
+        return $this->request($url,"GET", Null, $params, $headers);
     }
 
     /**
@@ -174,6 +174,6 @@ class HTTPClient
      */
     public function post($url, $data, $headers = null)
     {
-        return $this->request("POST", $url, $data, Null, $headers);
+        return $this->request($url,"POST",  $data, Null, $headers);
     }
 }
