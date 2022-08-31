@@ -2,11 +2,12 @@
 
 namespace IPPanel;
 
+use InvalidArgumentException;
 use IPPanel\Errors\Error;
 use IPPanel\Models\Response;
 
 /**
- * HTTPClient is a abstract client implementation for http
+ * HTTPClient is an abstract client implementation for http
  */
 class HTTPClient
 {
@@ -14,7 +15,7 @@ class HTTPClient
      * Request base url
      * @var string
      */
-    private $_baseURL = "";
+    private $_baseURL;
 
     /**
      * Request connection & response timeout in seconds
@@ -26,12 +27,12 @@ class HTTPClient
      * Request headers
      * @var array
      */
-    private $_headers = [];
+    private $_headers;
 
     /**
      * Supported http response codes
      */
-    private $_supportedStatusCodes = [200, 201, 204, 405, 400, 404, 401, 422];
+    private $_supportedStatusCodes = array(200, 201, 204, 400, 403, 404, 405, 422, 500);
 
     /**
      * Http client constructor
@@ -39,7 +40,7 @@ class HTTPClient
      * @param int $timeout request timeout
      * @param array $headers request headers
      */
-    public function __construct($baseURL, $timeout = 30, $headers = [])
+    public function __construct($baseURL, $timeout = 30, $headers = array())
     {
         $this->_baseURL = $baseURL;
 
@@ -59,7 +60,7 @@ class HTTPClient
     public function getBasedURL($uri, $params = null)
     {
         if (!$uri && !$params) {
-            throw new \InvalidArgumentException("function needs at least one argument");
+            throw new InvalidArgumentException("function needs at least one argument");
         }
 
         $url = rtrim($this->_baseURL, '/');
@@ -81,13 +82,13 @@ class HTTPClient
      * @param mixed $data request data
      * @param array $params query parameters
      * @param array $headers http headers 
-     * @return Models\Response parsed response
+     * @return Response parsed response
      * @throws Errors\HttpException
      * @throws Errors\Error
      */
     public function request(
         $method = "GET",
-        $url,
+        $url = "",
         $data = null,
         $params = null,
         $headers = null
@@ -122,7 +123,7 @@ class HTTPClient
         $response = curl_exec($curl);
 
         if ($response === false) {
-            throw new Errors\HttpException(curl_error($curl), curl_errno($curl));
+            throw new Errors\HttpException(curl_error($curl));
         }
 
         // get http status
@@ -130,12 +131,16 @@ class HTTPClient
 
         curl_close($curl);
 
-        // http status code is parsable or not 
+        // http status code is parsable or not
         if (!in_array($status, $this->_supportedStatusCodes)) {
             throw new Errors\HttpException("unexpected http error occurred", $status);
         }
 
         $arrayResponse = json_decode($response);
+
+        if (!$arrayResponse) {
+            throw new Error(sprintf("Invalid response: %s", $response));
+        }
 
         // marshal received response to base Response object
         $parsedResponse = new Response();

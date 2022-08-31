@@ -48,15 +48,15 @@ class Error extends \Exception
 
     /**
      * Parse API errors
-     * @param $response api response array
+     * @param $response mixed api response array
      * @return Error
      */
     public static function parseErrors($response)
     {
-        if (isset($response->data) && isset($response->data->error)) {
-            return new Error($response->data->error, $response->code);
+        if (isset($response->errorMessage) && $response->errorMessage != "") {
+            return new Error($response->errorMessage, $response->code);
         }
 
-        return false;
+        return null;
     }
 }

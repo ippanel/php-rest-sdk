@@ -12,7 +12,7 @@ class InboxMessage extends Base
      * Line number that message received on it
      * @var string
      */
-    public $number;
+    public $to;
 
     /**
      * Received message
@@ -24,13 +24,13 @@ class InboxMessage extends Base
      * Sender number
      * @var string
      */
-    public $sender;
+    public $from;
 
     /**
      * Received time
      * @var string
      */
-    public $time;
+    public $createdAt;
 
     /**
      * Message type

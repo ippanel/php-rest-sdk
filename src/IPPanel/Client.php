@@ -6,7 +6,6 @@ use Exception;
 use IPPanel\Models\InboxMessage;
 use IPPanel\Models\Message;
 use IPPanel\Models\PaginationInfo;
-use IPPanel\Models\Pattern;
 use IPPanel\Models\Recipient;
 
 /**
@@ -18,7 +17,7 @@ class Client
      * Client version for setting in api call user agent header
      * @var string
      */
-    const CLIENT_VERSION = "1.0.1";
+    const CLIENT_VERSION = "2.0.0";
 
     /**
      * Default timeout for api call
@@ -30,7 +29,7 @@ class Client
      * Api endpoint
      * @var string
      */
-    const ENDPOINT = "http://rest.ippanel.com";
+    const ENDPOINT = "https://api2.ippanel.com/api/v1";
 
     /**
      * HTTP client
@@ -47,20 +46,20 @@ class Client
     /**
      * Construct ippanel sms client
      * @param string $apiKey api key
-     * @param HTTPClient $httpClient http client
+     * @param HTTPClient|null $httpClient http client
      */
-    public function __construct($apiKey, $httpClient = null)
+    public function __construct(string $apiKey, HTTPClient $httpClient = null)
     {
         $this->_httpClient = $httpClient;
         $this->_apiKey = $apiKey;
 
-        $userAgent = sprintf("IPPanel/ApiClient/%s PHP/%s",  self::CLIENT_VERSION, phpversion());
+        $userAgent = sprintf("IPPanel/ApiClient/%s PHP/%s", self::CLIENT_VERSION, phpversion());
 
         if (!$httpClient) {
-            $this->_httpClient = new HTTPClient(self::ENDPOINT, self::DEFAULT_TIMEOUT, [
-                sprintf("Authorization: AccessKey %s", $this->_apiKey),
+            $this->_httpClient = new HTTPClient(self::ENDPOINT, self::DEFAULT_TIMEOUT, array(
+                sprintf("apikey: %s", $this->_apiKey),
                 sprintf("User-Agent: %s", $userAgent),
-            ]);
+            ));
         }
     }
 
@@ -69,10 +68,11 @@ class Client
      * @return float
      * @throws Errors\HttpException
      * @throws Errors\Error
+     * @throws Exception
      */
-    public function getCredit()
+    public function getCredit(): float
     {
-        $res = $this->_httpClient->get("/v1/credit");
+        $res = $this->_httpClient->get("/sms/accounting/credit/show");
 
         if (!isset($res->data->credit)) {
             throw new Exception("returned response not valid", 1);
@@ -86,72 +86,82 @@ class Client
      * @param string $originator originator number
      * @param array $recipients recipients list
      * @param string $message message body
+     * @param string $summary description
      * @return int message tracking code
      * @throws Errors\HttpException
      * @throws Errors\Error
+     * @throws Exception
      */
-    public function send($originator, $recipients, $message)
+    public function send(string $originator, array $recipients, string $message, string $summary): int
     {
-        $res = $this->_httpClient->post("/v1/messages", [
-            "originator" => $originator,
-            "recipients" => $recipients,
+        $res = $this->_httpClient->post("/sms/send/panel/single", array(
+            "sender" => $originator,
+            "recipient" => $recipients,
             "message" => $message,
-        ]);
+            "description" => [
+                "summary" => $summary,
+                "count_recipient" => "" . count($recipients)
+            ],
+        ));
 
-        if (!isset($res->data->bulk_id)) {
+        if (!isset($res->data->message_id)) {
             throw new Exception("returned response not valid", 1);
         }
 
-        return $res->data->bulk_id;
+        return $res->data->message_id;
     }
 
     /**
      * Get a message brief info
-     * @param int $bulkID message tracking code
+     * @param int $messageId message tracking code
      * @return Models\Message message tracking code
      * @throws Errors\HttpException
      * @throws Errors\Error
+     * @throws Exception
      */
-    public function getMessage($bulkID)
+    public function getMessage(int $messageId): Message
     {
-        $res = $this->_httpClient->get(sprintf("/v1/messages/%d", $bulkID));
+        $res = $this->_httpClient->get("/sms/message/all", [
+            'message_id' => $messageId,
+        ]);
 
-        if (!isset($res->data->message)) {
+        if (!isset($res->data) || !is_array($res->data)) {
             throw new Exception("returned response not valid", 1);
         }
 
         $msg = new Message();
-        $msg->fromJSON($res->data->message);
+        $msg->fromJSON($res->data[0]);
 
         return $msg;
     }
 
     /**
      * Fetch message recipients status
-     * @param int $bulkID message tracking code
+     * @param int $messageId message tracking code
      * @param int $page page number(start from 0)
      * @param int $limit fetch limit
      * @return Models\Recipient[] message tracking code
      * @throws Errors\HttpException
      * @throws Errors\Error
+     * @throws Exception
      */
-    public function fetchStatuses($bulkID, $page = 0, $limit = 10)
+    public function fetchStatuses(int $messageId, int $page = 0, int $limit = 10): array
     {
-        $res = $this->_httpClient->get(sprintf("/v1/messages/%d/recipients", $bulkID), [
+        $res = $this->_httpClient->get(sprintf("/sms/message/show-recipient/message-id/%s", $messageId), array(
             'page' => $page,
-            'limit' => $limit,
-        ]);
+            'per_page' => $limit,
+        ));
 
-        if (!isset($res->data->recipients) || !is_array($res->data->recipients)) {
+        if (!isset($res->data->deliveries) || !is_array($res->data->deliveries)) {
             throw new Exception("returned response not valid", 1);
         }
 
         $statuses = [];
 
-        foreach ($res->data->recipients as $r) {
+        foreach ($res->data->deliveries as $r) {
             $status = new Recipient();
             $status->fromJSON($r);
-            array_push($statuses, $status);
+            $statuses[] = $status;
         }
 
         $paginationInfo = new PaginationInfo();
@@ -162,29 +172,30 @@ class Client
 
     /**
      * Fetch inbox messages
-     * @param int $page page number(start from 0)
+     * @param int $page page number(starts from 1)
      * @param int $limit fetch limit
      * @return Models\InboxMessage[] messages
      * @throws Errors\HttpException
      * @throws Errors\Error
+     * @throws Exception
      */
-    public function fetchInbox($page = 0, $limit = 10)
+    public function fetchInbox(int $page = 1, int $limit = 10): array
     {
-        $res = $this->_httpClient->get("/v1/messages/inbox", [
+        $res = $this->_httpClient->get("/inbox", array(
             'page' => $page,
-            'limit' => $limit,
-        ]);
+            'per_page' => $limit,
+        ));
 
-        if (!isset($res->data->messages) || !is_array($res->data->messages)) {
+        if (!isset($res->data) || !is_array($res->data)) {
             throw new Exception("returned response not valid", 1);
         }
 
         $messages = [];
 
-        foreach ($res->data->messages as $r) {
+        foreach ($res->data as $r) {
             $msg = new InboxMessage();
             $msg->fromJSON($r);
-            array_push($messages, $msg);
+            $messages[] = $msg;
         }
 
         $paginationInfo = new PaginationInfo();
@@ -196,28 +207,37 @@ class Client
     /**
      * Create a pattern
      * @param string $pattern pattern schema
+     * @param string $description pattern description
+     * @param array $variables pattern variable names and types
+     * @param string $delimiter variable delimiter
      * @param bool $isShared determine that pattern shared or not
-     * @return Models\Pattern message tracking code
-     * @throws Errors\HttpException
+     * @return string pattern code
      * @throws Errors\Error
+     * @throws Errors\HttpException
      */
     public function createPattern(
-        $pattern,
-        $isShared = false
-    ) {
-        $res = $this->_httpClient->post("/v1/messages/patterns", [
-            'pattern' => $pattern,
-            'is_shared' => $isShared,
-        ]);
+        string $pattern, string $description,
+        array  $variables, string $delimiter = "%", bool $isShared = false): string
+    {
+        $params = array(
+            'message' => $pattern,
+            'delimiter' => $delimiter,
+            'description' => $description,
+            'variable' => [],
+            'is_share' => $isShared,
+        );
 
-        if (!isset($res->data->pattern)) {
+        foreach ($variables as $variableName => $type) {
+            $params['variable'][] = ['name' => $variableName, 'type' => $type];
+        }
+
+        $res = $this->_httpClient->post("/sms/pattern/normal/store", $params);
+
+        if (!isset($res->data[0]->code)) {
             throw new Exception("returned response not valid", 1);
         }
 
-        $pattern = new Pattern();
-        $pattern->fromJSON($res->data->pattern);
-
-        return $pattern;
+        return $res->data[0]->code;
     }
 
     /**
@@ -225,24 +245,25 @@ class Client
      * @param string $patternCode pattern code
      * @param string $originator originator number
      * @param string $recipient recipient number
-     * @param array $values pattern values
-     * @return int message tracking code
+     * @param array $variables pattern values
+     * @return int message code
      * @throws Errors\HttpException
      * @throws Errors\Error
+     * @throws Exception
      */
-    public function sendPattern($patternCode, $originator, $recipient, $values)
+    public function sendPattern(string $patternCode, string $originator, string $recipient, array $variables): int
     {
-        $res = $this->_httpClient->post("/v1/messages/patterns/send", [
-            "pattern_code" => $patternCode,
-            "originator" => $originator,
+        $res = $this->_httpClient->post("/sms/pattern/normal/send", array(
+            "code" => $patternCode,
+            "sender" => $originator,
             "recipient" => $recipient,
-            "values" => $values,
-        ]);
+            "variable" => $variables,
+        ));
 
-        if (!isset($res->data->bulk_id)) {
+        if (!isset($res->data->message_id)) {
             throw new Exception("returned response not valid", 1);
         }
 
-        return $res->data->bulk_id;
+        return $res->data->message_id;
     }
 }

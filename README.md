@@ -1,6 +1,7 @@
 # IPPanel SMS php api SDK
 
-This repository contains open source PHP client for `ippanel` api. Documentation can be found at: <http://docs.ippanel.com>.
+This repository contains open source PHP client for `ippanel` api. Documentation can be found
+at: <http://docs.ippanel.com>.
 
 [![Build Status](https://travis-ci.org/ippanel/php-rest-sdk.svg?branch=master)](https://travis-ci.org/ippanel/php-rest-sdk)
 
@@ -46,10 +47,11 @@ $credit = $client->getCredit();
 For sending sms, obviously you need `originator` number, `recipients` and `message`.
 
 ```php
-$bulkID = $client->send(
+$messageId = $client->send(
     "+9810001",          // originator
     ["98912xxxxxxx"],    // recipients
-    "ippanel is awesome" // message
+    "ippanel is awesome",// message
+    "description"        // is logged
 );
 
 ```
@@ -59,21 +61,21 @@ If send is successful, a unique tracking code returned and you can track your me
 ### Get message summery
 
 ```php
-$bulkID = "message-tracking-code";
+$messageId = "message-tracking-code";
 
-$message = $client->get_message($bulkID);
+$message = $client->get_message($messageId);
 
-echo $message->status;   // get message status
+echo $message->state;   // get message status
 echo $message->cost;     // get message cost
-echo $message->payback;  // get message payback
+echo $message->returnCost;  // get message payback
 ```
 
 ### Get message delivery statuses
 
 ```php
-$bulkID = "message-tracking-code"
+$messageId = "message-tracking-code"
 
-list($statuses, $paginationInfo) = $client->fetchStatuses($bulkID, 0, 10)
+list($statuses, $paginationInfo) = $client->fetchStatuses($messageId, 0, 10)
 
 // you can loop in messages statuses list
 foreach($statuses as status) {
@@ -91,18 +93,25 @@ fetch inbox messages
 list($messages, $paginationInfo) = $client->fetchInbox(0, 10);
 
 foreach($messages as $message) {
-    echo sprintf("Received message %s from number %s in line %s", $message->message, $message->sender, $message->number);
+    echo sprintf("Received message %s from number %s in line %s", $message->message, $message->from, $message->to);
 }
 ```
 
 ### Pattern create
 
-For sending messages with predefined pattern(e.g. verification codes, ...), you hav to create a pattern. a pattern at least have a parameter. parameters defined with `%param_name%`.
+For sending messages with predefined pattern(e.g. verification codes, ...), you hav to create a pattern. a pattern at
+least have a parameter.
 
 ```php
-$pattern = $client->createPattern("%name% is awesome", False);
+$patternVariables = [
+    "name" => "string",
+    "code" => "integer",
+];
 
-echo $pattern->code;
+$code = $client->createPattern("%name% is awesome, your code is %code%", "description", 
+    $patternVariables, '%', False);
+
+echo $code;
 ```
 
 ### Send with pattern
@@ -112,7 +121,7 @@ $patternValues = [
     "name" => "IPPANEL",
 ];
 
-$bulkID = $client->sendPattern(
+$messageId = $client->sendPattern(
     "t2cfmnyo0c",    // pattern code
     "+9810001",      // originator
     "98912xxxxxxx",  // recipient
@@ -127,7 +136,7 @@ use IPPanel\Errors\Error;
 use IPPanel\Errors\HttpException;
 
 try{
-    $bulkID = $client->send("9810001", ["98912xxxxx"], "ippanel is awesome");
+    $messageId = $client->send("9810001", ["98912xxxxx"], "ippanel is awesome");
 } catch (Error $e) { // ippanel error
     var_dump($e->unwrap()); // get real content of error
     echo $e->getCode();

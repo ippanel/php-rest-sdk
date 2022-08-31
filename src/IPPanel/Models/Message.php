@@ -11,7 +11,7 @@ class Message extends Base
      * Message tracking code
      * @var string
      */
-    public $bulkId = Null;
+    public $messageId = Null;
 
     /**
      * Originator number
@@ -29,7 +29,7 @@ class Message extends Base
      * Message status
      * @var string
      */
-    public $status = Null;
+    public $state = Null;
 
     /**
      * Message type
@@ -41,37 +41,37 @@ class Message extends Base
      * Message confirmation status
      * @var string
      */
-    public $confirmState = Null;
+    public $valid = Null;
 
     /**
      * Created at
      * @var string
      */
-    public $createdAt = Null;
+    public $time = Null;
 
     /**
      * Message send time
      * @var string
      */
-    public $sentAt = Null;
+    public $timeSend = Null;
 
     /**
      * Message recipients count
      * @var string
      */
-    public $recipientsCount = Null;
+    public $recipientCount = Null;
 
     /**
      * Recipients that passed validation 
      * @var string
      */
-    public $validRecipientsCount = Null;
+    public $exitCount = Null;
 
     /**
-     * Message number of pages
+     * Message number of parts
      * @var string
      */
-    public $page = Null;
+    public $part = Null;
 
     /**
      * Message cost
@@ -83,11 +83,11 @@ class Message extends Base
      * Message payback cost
      * @var string
      */
-    public $paybackCost = Null;
+    public $returnCost = Null;
 
     /**
      * Brief info about message
      * @var string
      */
-    public $description = Null;
+    public $summary = Null;
 }

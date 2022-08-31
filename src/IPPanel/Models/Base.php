@@ -19,7 +19,7 @@ function snakeToCamel($txt)
  */
 function snakeToCamelArray($arr)
 {
-    $transformed = [];
+    $transformed = array();
 
     foreach ($arr as $key => $value) {
         $transformed[snakeToCamel($key)] = $value;

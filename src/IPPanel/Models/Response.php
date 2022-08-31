@@ -68,8 +68,14 @@ class Response extends Base
     public $data = Null;
 
     /**
+     * response data
+     * @var mixed
+     */
+    public $errorMessage = Null;
+
+    /**
      * meta data
-     * @var Null|\PaginationInfo
+     * @var Null|PaginationInfo
      */
     public $meta = Null;
 }
