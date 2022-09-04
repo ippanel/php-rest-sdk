@@ -1,8 +1,5 @@
 # IPPanel SMS php api SDK
 
-This repository contains open source PHP client for `ippanel` api. Documentation can be found
-at: <http://docs.ippanel.com>.
-
 [![Build Status](https://travis-ci.org/ippanel/php-rest-sdk.svg?branch=master)](https://travis-ci.org/ippanel/php-rest-sdk)
 
 ## Installation
