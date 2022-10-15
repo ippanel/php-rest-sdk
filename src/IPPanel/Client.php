@@ -94,7 +94,7 @@ class Client
      */
     public function send(string $originator, array $recipients, string $message, string $summary): int
     {
-        $res = $this->_httpClient->post("/sms/send/panel/single", array(
+        $res = $this->_httpClient->post("/sms/send/webservice/single", array(
             "sender" => $originator,
             "recipient" => $recipients,
             "message" => $message,
