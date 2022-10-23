@@ -1,5 +1,4 @@
 <?php
-
 namespace IPPanel;
 
 use Exception;
