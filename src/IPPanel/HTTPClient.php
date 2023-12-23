@@ -108,6 +108,13 @@ class HTTPClient
         curl_setopt($curl, CURLOPT_TIMEOUT, $this->_timeout);
         curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, $this->_timeout);
 
+        /*
+            Solved: SSL certificate problem: unable to get local issuer certificate
+        */
+
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
         switch ($method) {
             case 'GET':
                 curl_setopt($curl, CURLOPT_HTTPGET, true);
